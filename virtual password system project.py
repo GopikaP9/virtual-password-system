@@ -1,87 +1,65 @@
-import tkinter as tk
-from tkinter import messagebox
+import streamlit as st
 import random
 
-# Variables initialization
+# Page Configuration
+st.set_page_config(page_title="Virtual Password System", layout="centered")
+
+# Initialize session state for variables
+if 'attempts_count' not in st.session_state:
+    st.session_state.attempts_count = 0
+if 'entered_password' not in st.session_state:
+    st.session_state.entered_password = ""
+if 'chars' not in st.session_state:
+    st.session_state.chars = list("0123456789ABC@#*")
+    random.shuffle(st.session_state.chars)
+
 real_password = "2006"
-entered_password = ""
-attempts_count = 0 
 
-# 1. Shuffle keypad characters
-def generate_keypad():
-    chars = list("0123456789ABC@#") 
-    random.shuffle(chars)
-    return chars
+st.title("🛡️ Virtual Password System")
+st.write("Enter your password using the secure keypad below:")
 
-# Button click logic
+# Display current entered password (as stars)
+display_text = "*" * len(st.session_state.entered_password)
+st.subheader(f"Password: {display_text}")
+
+# Button functions
 def press(char):
-    global entered_password
-    entered_password += str(char)
-    display_var.set("*" * len(entered_password))
+    st.session_state.entered_password += str(char)
 
-# 2. Clear button logic
 def clear_entry():
-    global entered_password
-    entered_password = ""
-    display_var.set("")
+    st.session_state.entered_password = ""
 
-# 3. Login logic with Attempt Limit
 def check_password():
-    global entered_password, attempts_count
-    
-    if entered_password == real_password:
-        messagebox.showinfo("Success", "Access Granted!")
-        attempts_count = 0
-        root.destroy()
+    if st.session_state.entered_password == real_password:
+        st.success("✅ Access Granted!")
+        st.balloons()
+        st.session_state.attempts_count = 0
     else:
-        attempts_count += 1
-        remaining = 3 - attempts_count
-        if attempts_count >= 3:
-            messagebox.showerror("Locked", "you entered it wrong 3 times! System Locked.")
-            root.destroy()
+        st.session_state.attempts_count += 1
+        remaining = 3 - st.session_state.attempts_count
+        if st.session_state.attempts_count >= 3:
+            st.error("🚫 System Locked! Too many wrong attempts.")
+            st.session_state.entered_password = ""
         else:
-            messagebox.showwarning("Denied", f"Wrong Password! {remaining} chances left.")
-            clear_entry()
+            st.warning(f"❌ Wrong Password! {remaining} attempts remaining.")
+            st.session_state.entered_password = ""
 
-# GUI window setup
-root = tk.Tk()
-root.title("Virtual Password System")
-root.geometry("350x550")
+# Create Grid Layout for Keypad
+cols = st.columns(4)
+for i, char in enumerate(st.session_state.chars):
+    if cols[i % 4].button(char, key=f"btn_{char}"):
+        press(char)
+        st.rerun()
 
-display_var = tk.StringVar()
-display = tk.Entry(root, textvariable=display_var, font=("Arial", 20), justify="center", state="readonly")
-display.pack(pady=20, padx=10)
+st.divider()
 
-frame = tk.Frame(root)
-frame.pack(expand=True, fill="both", padx=20)
+# Action Buttons
+col1, col2 = st.columns(2)
+if col1.button("🗑️ Clear", use_container_width=True):
+    clear_entry()
+    st.rerun()
 
-# Configure grid columns to be equal size
-for i in range(3):
-    frame.grid_columnconfigure(i, weight=1)
+if col2.button("🔓 Login", use_container_width=True):
+    check_password()
 
-chars = generate_keypad()
-row, col = 0, 0
-
-for char in chars:
-    # 'sticky="nsew"' makes buttons uniform in size
-    btn = tk.Button(frame, text=str(char), width=5, height=2, font=("Arial", 12, "bold"),
-                    command=lambda c=char: press(c))
-    btn.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
-    
-    col += 1
-    if col > 2:
-        col = 0
-        row += 1
-
-# Login Button (Green)
-check_btn = tk.Button(root, text="Login", font=("Arial", 12, "bold"), 
-                      bg="#4CAF50", fg="white", width=20, command=check_password)
-check_btn.pack(pady=10)
-
-# Clear Button (Red)
-clear_btn = tk.Button(root, text="Clear", font=("Arial", 12, "bold"), 
-                      bg="#f44336", fg="white", width=20, command=clear_entry)
-clear_btn.pack(pady=5)
-
-root.mainloop()
 
